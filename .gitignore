@@ -1,0 +1,6 @@
+.DS_store
+.env
+*.numbers
+media/
+venv/
+__pycache__/
