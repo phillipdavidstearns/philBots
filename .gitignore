@@ -1,5 +1,6 @@
 .DS_store
 .env
+*.tsv
 *.numbers
 media/
 venv/

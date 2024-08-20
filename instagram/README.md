@@ -2,12 +2,13 @@
 
 ## Overview
 
-This guide covers the basics of setting up Meta/Facebook/Instagram so that you can automate posts programmatically. This opens up possibilities beyond merely scheduling posts such as randomly assembling posts from a database of content that you manage or generatively creating and posting content from an application hosted on a remote server.
+This guide covers the basics of setting up Meta/Facebook/Instagram so that you can automate posts programmatically. This opens up possibilities beyond merely scheduling posts, for example, randomly assembling posts from a database of content that you manage or algorithmically generating and publishing content from an application hosted on a remote server.
 
-The goal I had when setting out to make my first bots was to randomly generate and publish posts from a data base of existing content.
+The goal I had when setting out to make my first bots was to randomly generate and publish posts from a database of existing content.
 
 ### My Approach Involves a Few Ingredients:
 
+* Linux (Debian or Ubuntu type distro) and/or Mac OSX. The particulars of how to install and configure software will be different on Windows machines.
 * A remote server with a static IP address.
 * A domain with DNS configured to point to that server.
 * A reverse proxy on that server configured to server static content (media files) as hosted content.
@@ -30,6 +31,8 @@ This guide will not cover setting up infrastructure remotely. Local setup for th
 5. Write a script to create/publish a carousel post with multiple images
 
 ## Setup Facebook/Instagram/Meta Business Suite
+
+The goal of the following instructions is to create a System User with Admin privileges on the instagram and facebook pages we wish to publish to.
 
 ### 1. Setup a Business Portfolio in Meta Business Suite (if you don't already have one)
 * [Meta Business Suite](https://www.facebook.com/business/tools/meta-business-suite) - Click the Get Started Link and complete setup flow

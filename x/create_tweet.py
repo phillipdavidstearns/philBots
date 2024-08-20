@@ -1,3 +1,4 @@
+# The original script used to test posting a tweet to X
 # Source: https://github.com/xdevplatform/Twitter-API-v2-sample-code/blob/main/Manage-Tweets/create_tweet.py
 
 from requests_oauthlib import OAuth1Session

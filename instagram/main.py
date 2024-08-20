@@ -14,20 +14,6 @@ from templates import (
 )
 
 #================================================================
-# MONGO SESSION CLASS
-
-class MongoSession():
-  def __init__(self, _url, _username, _password, _database):
-    self.client = MongoClient(_url,
-      username = _username,
-      password = _password,
-      authSource = _database,
-      authMechanism = 'SCRAM-SHA-256'
-    )
-    self.db = self.client[_database]
-    self.media = self.db['media']
-
-#================================================================
 # Caption Formatters
 
 def buildSingleCaption(mediaObject):
@@ -60,8 +46,8 @@ def buildCarouselCaption(mediaObjects):
     body = ""
     tagList = []
 
-    for i,mediaObject in mediaObjects:
-      body += f"{i}. {mediaObject['name']} - {mediaObject['description']}\n\n"
+    for i, mediaObject in enumerate(mediaObjects):
+      body += f"{i+1}. {mediaObject['name']} - {mediaObject['description']}\n\n"
       tagList += mediaObject['tagList']
 
     body += f"{random.choice(mediaObjects[0]['captionList'])}\n\n"
@@ -82,46 +68,18 @@ def buildCarouselCaption(mediaObjects):
     logging.error(f'buildCarouselCaption: {repr(e)}')
     return None
 
+#================================================================
+# Get Random Media Object
+
 def getRandomMediaObject(max_tries=5, post_type=None):
 
-  # pipeline = [
-  #   {
-  #     '$group' : {
-  #       '_id' : 'groups',
-  #       'groups': {'$push': '$groupList'}
-  #     }
-  #   }, 
-  #   {'$unwind' : '$groups'}, 
-  #   {'$unwind' : '$groups'}, 
-  #   {
-  #     '$group' : {
-  #       '_id' : '$_id',
-  #       'groups' : {'$addToSet' : '$groups'}
-  #     }
-  #   }
-  # ]
-
-  # aggregation = mongo.media.aggregate(pipeline)
-  # result = list(aggregation)[0]
-
-  # if not 'groups' in result:
-  #   logging.warning(f'Was expecting groups as a field in aggregation result. {repr(result)}')
-  #   return None
-
-  # group = random.choice(result['groups'])
-
-  # if not (mediaObjects := list(mongo.media.find({ 'groupList': group }))):
-  #   logging.warning(f'Unable to find entries matching group: {group}')
-  #   return None
   try:
     tries = 0
-    query = {}
     mediaObject = None
+    candidates = list(mongo_db['media'].find({}))
     
     while not mediaObject:
-      count = mongo.media.count_documents(query)
-      index = random.randrange(0, count)
-      candidate = mongo.media.find(query)[index]
+      candidate = random.choice(candidates)
 
       lastIGPost = candidate['lastIGPost'] if 'lastIGPost' in candidate else 0
       if time.time() - lastIGPost > (config('POST_COOL_DOWN', cast=float, default=7.0) * 86400):
@@ -161,7 +119,7 @@ def createImageContainer(image_url=None, caption=None, ig_user_id=None, access_t
     )
 
     if not 'id' in (result := response.json()):
-      raise Exception(f'{ repr(result) }')
+      raise Exception(f'status code: { response.status_code } - { repr(result) }')
 
     creation_id = result['id']
     logging.debug(f'createImageContainer() - result: {repr(result)}')
@@ -243,7 +201,7 @@ def automatedSinglePost(mediaObject=None, ig_user_id=None, access_token=None):
       # if unsuccessful, raise and exception to pop out of the try block and log it
       raise Exception('failed to create image container')
 
-    mongo.media.update_one(
+    mongo_db['media'].update_one(
       { 'filename': mediaObject['filename'] },
       { '$set': { 'lastIGPost': time.time() } }
     )
@@ -272,7 +230,7 @@ def automatedCarouselPost(mediaObject=None, ig_user_id=None, access_token=None):
     group = random.choice(mediaObject['groupList'])
 
     #find all other members of the group
-    groupMembers = mongo.media.find({'groupList' : {'$eq': group}})
+    groupMembers = mongo_db['media'].find({'groupList' : {'$eq': group}})
 
     #build a list of mediaObjects
     logging.debug(f'Looking for mediaObjects in group: {group}, groupMembers: {groupMembers}')
@@ -325,7 +283,7 @@ def automatedCarouselPost(mediaObject=None, ig_user_id=None, access_token=None):
         is_carousel_item=True
       )):
         # set the lastIGPost time to the current time
-        mongo.media.update_one(
+        mongo_db['media'].update_one(
           { 'filename' : mediaObject['filename'] },
           { '$set': { 'lastIGPost': time.time() } }
         )
@@ -381,12 +339,19 @@ if __name__ == "__main__":
       format='[instaBotGT] - %(levelname)s | %(message)s'
     )
 
-    mongo = MongoSession(
-      config('MONGO_URL'),
-      config('MONGO_USERNAME'),
-      config('MONGO_PASSWORD'),
-      config('MONGO_DB')
+    # Create an instance of the MongoDB client
+    # ref: https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html
+    mongo_client = MongoClient(
+      host=config('MONGO_URL', cast=str),
+      username=config('MONGO_USERNAME', cast=str),
+      password=config('MONGO_PASSWORD', cast=str),
+      authSource=config('MONGO_DB', cast=str),
+      authMechanism='SCRAM-SHA-256'
     )
+
+    # Get the instance of the database from the client
+    # This will be used to interface with the collections within the database
+    mongo_db = mongo_client[config('MONGO_DB')]
 
     access_token = config('SYSTEM_USER_TOKEN',cast=str)
     access_token_app = f"{config('APP_ID',cast=str)}|{config('APP_SECRET',cast=str)}"

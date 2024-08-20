@@ -11,35 +11,19 @@ from pymongo import MongoClient
 from templates import tweet_template
 
 #================================================================
-# MONGO SESSION CLASS
-
-class MongoSession():
-  def __init__(self, _url, _username, _password, _database):
-    self.client = MongoClient(_url,
-      username = _username,
-      password = _password,
-      authSource = _database,
-      authMechanism = 'SCRAM-SHA-256'
-    )
-    self.db = self.client[_database]
-    self.media = self.db['media']
-
-#================================================================
 # Helpers
 
 def getRandomMediaObject(max_tries=5):
   try:
     tries = 0
-    query = {}
-
+    candidates = list(mongo_db['media'].count_documents({}))
     mediaObject = None
-    while not mediaObject:
-      count = mongo.media.count_documents(query)
-      index = random.randrange(0, count)
-      candidate = mongo.media.find(query)[index]
 
-      current_time = time.time()
-      if current_time - candidate['lastXPost'] > (config('POST_COOL_DOWN', cast=float, default=7.0) * 86400):
+    while not mediaObject:
+
+      candidate = random.choice(candidates)
+
+      if time.time() - candidate['lastXPost'] > (config('POST_COOL_DOWN', cast=float, default=7.0) * 86400):
         mediaObject = candidate
 
       tries += 1
@@ -83,7 +67,7 @@ def mediaPost(mediaObject=None):
     group = random.choice(mediaObject['groupList'])
 
     #find all other members of the group
-    groupMembers = mongo.media.find({ 'groupList' : { '$eq': group } })
+    groupMembers = mongo_db['media'].find({ 'groupList' : { '$eq': group } })
 
     #build a list of candidates
     logging.debug(f'Looking for candidates in group: { group }, groupMembers: { groupMembers }')
@@ -193,12 +177,19 @@ if __name__ == '__main__':
       format='[TWITTER BOT] - %(levelname)s | %(message)s'
     )
 
-    mongo = MongoSession(
-      config('MONGO_URL'),
-      config('MONGO_USERNAME'),
-      config('MONGO_PASSWORD'),
-      config('MONGO_DB')
+    # Create an instance of the MongoDB client
+    # ref: https://pymongo.readthedocs.io/en/stable/api/pymongo/mongo_client.html
+    mongo_client = MongoClient(
+      host=config('MONGO_URL', cast=str),
+      username=config('MONGO_USERNAME', cast=str),
+      password=config('MONGO_PASSWORD', cast=str),
+      authSource=config('MONGO_DB', cast=str),
+      authMechanism='SCRAM-SHA-256'
     )
+
+    # Get the instance of the database from the client
+    # This will be used to interface with the collections within the database
+    mongo_db = mongo_client[config('MONGO_DB')]
 
     oauth = OAuth1Session(
       client_key=config("API_KEY", cast=str),
