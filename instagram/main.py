@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(
       level=config('LOG_LEVEL', default=20, cast=int),
-      format='[instaBotGT] - %(levelname)s | %(message)s'
+      format='[Instagram Bot] - %(levelname)s | %(message)s'
     )
 
     # Create an instance of the MongoDB client

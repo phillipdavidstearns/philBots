@@ -212,7 +212,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(
       level=config('LOG_LEVEL', default=20, cast=int),
-      format='[TWITTER BOT] - %(levelname)s | %(message)s'
+      format='[X Bot] - %(levelname)s | %(message)s'
     )
 
     # Create an instance of the MongoDB client
