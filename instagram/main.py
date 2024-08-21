@@ -40,7 +40,6 @@ def buildSingleCaption(mediaObject):
     return None
 
 def buildCarouselCaption(mediaObjects):
-  logging.info(f"mediaObjects: {repr(mediaObjects)}")
   #build the caption
   try:
     body = ""
@@ -56,12 +55,11 @@ def buildCarouselCaption(mediaObjects):
     tags = ' '.join(['#' + tag for tag in tagList])
 
     caption = carousel_caption_template.format(
-      title=mediaObjects['projectName'],
+      title=mediaObjects[0]['projectName'],
       body=body,
       tags=tags,
     )
 
-    logging.debug(f'buildCarouselCaption caption: {repr(caption)}')
     return caption
 
   except Exception as e:
