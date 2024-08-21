@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # This will be used to interface with the collections within the database
     mongo_db = mongo_client[config('MONGO_DB')]
 
-    access_token = config('PAGES_ACCESS_TOKEN')
+    access_token = config('PAGE_ACCESS_TOKEN')
     fb_page_id = config('FACEBOOK_PAGE_ID',cast=str)
 
     if not (mediaObject := getRandomMediaObject()):

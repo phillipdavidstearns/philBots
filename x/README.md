@@ -60,7 +60,7 @@ consumer_key = config('API_KEY')
 consumer_secret = config('API_SECRET')
 ```
 
-1. Remove delcaration and assignment of the `payload` variable
+1. Remove declaration and assignment of the `payload` variable
 1. After the line `oauth_tokens = oauth.fetch_access_token(access_token_url)` add:
 
 ```python

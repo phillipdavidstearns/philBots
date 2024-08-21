@@ -85,7 +85,7 @@ The goal of the following instructions is to create a System User with Admin pri
 1. Click **Apps**
 1. Select an App to assign to the System User
 1. Enable **Manage App** under **Full Control**
-1. Click **Instgram accounts**
+1. Click **Instagram accounts**
 1. Select an Account to assign to the System User
 1. Enable **Content** under **Partial access**
 1. Click **Save**
