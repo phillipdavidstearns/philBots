@@ -1,29 +1,18 @@
-single_caption_template="""{title}
-
-{subtitle}
-
----
+single_image_template="""{title}
 
 {body}
 
+{url}
+
 DM to inquire about availability.
 
----
+{tags} #phillipstearns"""
 
-{tags} #phillipstearns #art
-
-phillipstearns.com
-"""
-
-carousel_caption_template="""{title}
+multiple_image_template="""{title}
 
 {body}
+phillipstearns.com
 
 DM to inquire about availability.
 
----
-
-{tags} #phillipstearns #art
-
-phillipstearns.com
-"""
+{tags} #phillipstearns"""

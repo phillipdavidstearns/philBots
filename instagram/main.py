@@ -76,7 +76,7 @@ def getRandomMediaObject(max_tries=5, post_type=None):
   try:
     tries = 0
     mediaObject = None
-    candidates = list(mongo_db['media'].find({}))
+    candidates = list(mongo_db['media'].find({'type':'image'}))
     
     while not mediaObject:
       candidate = random.choice(candidates)
@@ -148,7 +148,7 @@ def createCarouselContainer(children=None, caption=None, ig_user_id=None, access
     )
 
     if not 'id' in (result := response.json()):
-      raise Exception(f'{repr(result)}')
+      raise Exception(f'status code: { response.status_code } - { repr(result) }')
 
     creation_id = result['id']
     logging.debug(f'createCarouselContainer() - result: {repr(result)}')
@@ -345,7 +345,7 @@ if __name__ == "__main__":
       host=config('MONGO_URL', cast=str),
       username=config('MONGO_USERNAME', cast=str),
       password=config('MONGO_PASSWORD', cast=str),
-      authSource=config('MONGO_DB', cast=str),
+      authSource=config('MONGO_AUTH_SOURCE', cast=str),
       authMechanism='SCRAM-SHA-256'
     )
 

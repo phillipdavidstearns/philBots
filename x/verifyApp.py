@@ -1,6 +1,5 @@
 from decouple import config
 from requests_oauthlib import OAuth1Session
-import os
 import json
 
 consumer_key = config('API_KEY')

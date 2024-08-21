@@ -8,15 +8,19 @@ from decouple import config
 from base64 import b64encode
 from pymongo import MongoClient
 
-from templates import tweet_template
+from templates import (
+  single_image_template,
+  multiple_image_template
+)
+
+from oauth_helper import oauth
 
 #================================================================
-# Helpers
 
 def getRandomMediaObject(max_tries=5):
   try:
     tries = 0
-    candidates = list(mongo_db['media'].count_documents({}))
+    candidates = list(mongo_db['media'].find({'type':'image'}))
     mediaObject = None
 
     while not mediaObject:
@@ -38,22 +42,48 @@ def getRandomMediaObject(max_tries=5):
   finally:
     return mediaObject
 
-def buildTweetText(mediaObject):
-  url = mediaObject['projectURL'] if mediaObject['projectURL'] else 'https://phillipstearns.com'
-  random.shuffle(mediaObject['tagList'])
-  tags = ' '.join(['#' + tag for tag in mediaObject['tagList'][:6]])
+#================================================================
+
+def buildSingleImageText(mediaObject):
   try:
-    text = tweet_template.format(
+    url = mediaObject['projectURL'] if mediaObject['projectURL'] else config('DEFAULT_URL', cast=str)
+    random.shuffle(mediaObject['tagList'])
+    tags = ' '.join(['#' + tag for tag in mediaObject['tagList'][:5]])
+
+    text = single_image_template.format(
       title=mediaObject['projectName'],
-      body=f"{mediaObject['name']} - {mediaObject['description']}",
+      body=f"{ mediaObject['name'] } { mediaObject['description'] }",
       url=url,
       tags=tags,
     )
-    logging.debug(f'text: { repr(text) }')
     return text
 
   except Exception as e:
-    logging.error(f'buildTweetText: { repr(e) }')
+    logging.error(f'buildSingleImageText: { repr(e) }')
+    return None
+
+def buildMultiImageText(mediaObjects):
+  try:
+    body = ""
+    tagList = []
+
+    for i, mediaObject in enumerate(mediaObjects):
+      body += f"{i+1}. {mediaObject['name']} - {mediaObject['description']}\n"
+      tagList += mediaObject['tagList']
+
+    tagList = list(set(tagList))
+    random.shuffle(tagList)
+    tags = ' '.join(['#' + tag for tag in tagList[:5]])
+
+    text = multiple_image_template.format(
+      title=mediaObjects[0]['projectName'],
+      body=body,
+      tags=tags
+    )
+    return text
+
+  except Exception as e:
+    logging.error(f'buildMultiImageText: { repr(e) }')
     return None
 
 #================================================================
@@ -87,43 +117,46 @@ def mediaPost(mediaObject=None):
     # twitter posts can have 1-4 images
     max_media_uploads = random.randrange(1, 5)
 
-    if max_media_uploads == 1 or len(candidates) == 1:
-      if not 'media_id' in (upload_result := upload_media(mediaObject)):
-        logging.error('Media upload failed.')
-        return None
+    text = ""
+    media = { 'media_ids' : [] }
+    published_mediaObjects = []
 
-      if not (media_id := str(upload_result['media_id'])):
-        logging.error('Post has media ids.')
-        return None
-
-      return submit_post(
-        text=buildTweetText(mediaObject),
-        media={ 'media_ids' : [ media_id ] }
-      )
-
-    # build list of media_ids
-    media_ids = []
     for candidate in candidates:
+      if not (upload_result := upload_media(candidate)):
+        continue
+
+      if 'media_id_string' in upload_result:
+        mongo_db['media'].update_one(
+          { 'filename': mediaObject['filename'] },
+          { '$set': { 'lastXPost': time.time() } }
+        )
+        media['media_ids'].append(upload_result['media_id_string'])
+        published_mediaObjects.append(candidate)
+
       # stop once we've reached the max
-      if len(media_ids) >= max_media_uploads:
+      if len(media['media_ids']) >= max_media_uploads:
         logging.debug(f'Reached max_media_uploads count: { max_media_uploads }')
         break
 
-      if 'media_id' in (upload_result := upload_media(candidate)):
-        media_ids.append(str(upload_result['media_id']))
-
-    if not media_ids:
-      logging.error('Post has media ids.')
-      return None
+    if not media['media_ids']:
+      raise Exception('Post has media ids.')
+    elif len(media['media_ids']) == 1:
+      if not( text := buildSingleImageText(mediaObject)):
+        raise Exception("buildSingleImageText() returned an empty string")
+    else:
+      if not (text := buildMultiImageText(published_mediaObjects)):
+        raise Exception("buildMultiImageText() returned an empty string")
 
     return submit_post(
-      text=buildTweetText(mediaObject),
-      media={ 'media_ids' : media_ids }
+      text=text,
+      media=media
     )
 
   except Exception as e:
     logging.error(f'mediaPost: {repr(e)}')
     return None
+
+#================================================================
 
 def upload_media(mediaObject=None):
   # fetch the image data from the mediaObject url
@@ -147,7 +180,12 @@ def upload_media(mediaObject=None):
 
   return post_response.json()
 
+#================================================================
+
 def submit_post(text="", media=None):
+  logging.info(f"text: {text}")
+  logging.info(f"media: {media}")
+
  # Making the request
   payload = { "text" : text }
 
@@ -183,20 +221,13 @@ if __name__ == '__main__':
       host=config('MONGO_URL', cast=str),
       username=config('MONGO_USERNAME', cast=str),
       password=config('MONGO_PASSWORD', cast=str),
-      authSource=config('MONGO_DB', cast=str),
+      authSource=config('MONGO_AUTH_SOURCE', cast=str),
       authMechanism='SCRAM-SHA-256'
     )
 
     # Get the instance of the database from the client
     # This will be used to interface with the collections within the database
     mongo_db = mongo_client[config('MONGO_DB')]
-
-    oauth = OAuth1Session(
-      client_key=config("API_KEY", cast=str),
-      client_secret=config("API_SECRET", cast=str),
-      resource_owner_key=config("OAUTH1_TOKEN", cast=str),
-      resource_owner_secret=config("OAUTH1_TOKEN_SECRET", cast=str),
-    )
 
     mediaPost(getRandomMediaObject())
 
